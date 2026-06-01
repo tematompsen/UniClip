@@ -31,10 +31,36 @@ func writeText(_ text: String, to url: URL) throws {
     try text.data(using: .utf8)!.write(to: url)
 }
 
-func pngData(_ image: NSImage) throws -> Data {
-    guard let tiff = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiff),
-          let data = bitmap.representation(using: .png, properties: [:]) else {
+func pngData(_ image: NSImage, pixels: Int) throws -> Data {
+    guard let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels,
+        pixelsHigh: pixels,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else {
+        throw NSError(domain: "UniClipIcon", code: 1)
+    }
+
+    bitmap.size = NSSize(width: pixels, height: pixels)
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    image.draw(
+        in: NSRect(x: 0, y: 0, width: pixels, height: pixels),
+        from: NSRect(x: 0, y: 0, width: image.size.width, height: image.size.height),
+        operation: .copy,
+        fraction: 1,
+        respectFlipped: false,
+        hints: [.interpolation: NSImageInterpolation.high]
+    )
+    NSGraphicsContext.restoreGraphicsState()
+
+    guard let data = bitmap.representation(using: .png, properties: [:]) else {
         throw NSError(domain: "UniClipIcon", code: 1)
     }
     return data
@@ -77,33 +103,56 @@ func statusBarImage(size: CGFloat) -> NSImage {
     NSColor.clear.setFill()
     NSRect(x: 0, y: 0, width: size, height: size).fill()
 
-    NSColor.black.setFill()
-    let back = NSBezierPath(roundedRect: NSRect(x: size * 0.17, y: size * 0.35, width: size * 0.43, height: size * 0.46), xRadius: size * 0.11, yRadius: size * 0.11)
-    back.fill()
-    let front = NSBezierPath(roundedRect: NSRect(x: size * 0.40, y: size * 0.16, width: size * 0.43, height: size * 0.46), xRadius: size * 0.11, yRadius: size * 0.11)
-    front.fill()
+    let scale = size / 24.0
+    let inset = size * 0.12
 
-    let bridge = NSBezierPath()
-    bridge.move(to: NSPoint(x: size * 0.40, y: size * 0.40))
-    bridge.curve(to: NSPoint(x: size * 0.60, y: size * 0.59), controlPoint1: NSPoint(x: size * 0.45, y: size * 0.50), controlPoint2: NSPoint(x: size * 0.54, y: size * 0.47))
-    bridge.line(to: NSPoint(x: size * 0.65, y: size * 0.55))
-    bridge.curve(to: NSPoint(x: size * 0.45, y: size * 0.36), controlPoint1: NSPoint(x: size * 0.58, y: size * 0.44), controlPoint2: NSPoint(x: size * 0.50, y: size * 0.46))
-    bridge.close()
-    bridge.fill()
+    func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+        NSPoint(x: inset + x * scale * 0.76, y: size - inset - y * scale * 0.76)
+    }
 
-    NSColor.clear.setFill()
-    NSColor.clear.setStroke()
+    NSColor.black.setStroke()
+    let path = NSBezierPath()
+    path.lineWidth = max(1.5, size * 0.065)
+    path.lineCapStyle = .round
+    path.lineJoinStyle = .round
+
+    path.move(to: point(16.964, 8.982))
+    path.curve(to: point(16.058, 3.458), controlPoint1: point(16.961, 6.032), controlPoint2: point(16.917, 4.504))
+    path.curve(to: point(15.505, 2.904), controlPoint1: point(15.892, 3.256), controlPoint2: point(15.707, 3.070))
+    path.curve(to: point(9.480, 2.000), controlPoint1: point(14.400, 2.000), controlPoint2: point(12.760, 2.000))
+    path.curve(to: point(3.456, 2.905), controlPoint1: point(6.200, 2.000), controlPoint2: point(4.560, 2.000))
+    path.curve(to: point(2.903, 3.459), controlPoint1: point(3.254, 3.071), controlPoint2: point(3.069, 3.257))
+    path.curve(to: point(1.998, 9.480), controlPoint1: point(1.998, 4.560), controlPoint2: point(1.998, 6.200))
+    path.curve(to: point(2.904, 15.503), controlPoint1: point(1.998, 12.760), controlPoint2: point(1.998, 14.400))
+    path.curve(to: point(3.457, 16.056), controlPoint1: point(3.071, 15.706), controlPoint2: point(3.255, 15.890))
+    path.curve(to: point(8.982, 16.962), controlPoint1: point(4.503, 16.916), controlPoint2: point(6.032, 16.960))
+
+    path.move(to: point(14.028, 9.025))
+    path.line(to: point(16.994, 8.982))
+    path.move(to: point(14.014, 22.002))
+    path.line(to: point(16.980, 21.959))
+    path.move(to: point(21.972, 14.022))
+    path.line(to: point(21.944, 16.982))
+    path.move(to: point(9.010, 14.036))
+    path.line(to: point(8.982, 16.996))
+    path.move(to: point(11.487, 9.025))
+    path.curve(to: point(9.010, 11.049), controlPoint1: point(10.655, 9.174), controlPoint2: point(9.317, 9.327))
+    path.move(to: point(19.495, 21.959))
+    path.curve(to: point(22.003, 19.973), controlPoint1: point(20.330, 21.822), controlPoint2: point(21.669, 21.689))
+    path.move(to: point(19.495, 9.025))
+    path.curve(to: point(21.972, 11.049), controlPoint1: point(20.327, 9.174), controlPoint2: point(21.665, 9.327))
+    path.move(to: point(11.500, 21.957))
+    path.curve(to: point(9.022, 19.934), controlPoint1: point(10.667, 21.809), controlPoint2: point(9.330, 21.656))
+
+    path.stroke()
     image.unlockFocus()
     return image
 }
 
 let statusSvg = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path fill="black" d="M16 22c0-7 5-12 12-12h20c7 0 12 5 12 12v20c0 7-5 12-12 12H28c-7 0-12-5-12-12V22Z" opacity=".82"/>
-  <path fill="black" d="M4 10C4 4 8 0 14 0h20c6 0 10 4 10 10v20c0 6-4 10-10 10H14C8 40 4 36 4 30V10Z"/>
-  <path fill="black" d="M28 35c6-13 16-5 22-18l6 5c-6 14-17 7-23 20l-5-7Z"/>
-  <rect x="16" y="7" width="16" height="5" rx="2.5" fill="white"/>
-  <rect x="36" y="52" width="16" height="5" rx="2.5" fill="white"/>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.964 8.982C16.961 6.032 16.917 4.504 16.058 3.458C15.8923 3.2557 15.707 3.07014 15.505 2.904C14.4 2 12.76 2 9.48005 2C6.20005 2 4.56005 2 3.45605 2.905C3.25404 3.07114 3.06882 3.2567 2.90305 3.459C1.99805 4.56 1.99805 6.2 1.99805 9.48C1.99805 12.76 1.99805 14.4 2.90405 15.503C3.07071 15.7057 3.25505 15.89 3.45705 16.056C4.50305 16.916 6.03205 16.96 8.98205 16.962" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.0284 9.02542L16.9944 8.98242M14.0144 22.0024L16.9804 21.9594M21.9724 14.0224L21.9444 16.9824M9.01042 14.0364L8.98242 16.9964M11.4874 9.02542C10.6554 9.17442 9.31742 9.32742 9.01042 11.0494M19.4954 21.9594C20.3304 21.8224 21.6694 21.6894 22.0034 19.9734M19.4954 9.02542C20.3274 9.17442 21.6654 9.32742 21.9724 11.0494M11.5004 21.9574C10.6674 21.8094 9.33042 21.6564 9.02242 19.9344" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 """
 
@@ -121,11 +170,11 @@ let macIconSizes: [(String, CGFloat)] = [
 ]
 
 for (name, size) in macIconSizes {
-    try pngData(try squareIcon(size: size)).write(to: iconset.appendingPathComponent(name))
+    try pngData(try squareIcon(size: size), pixels: Int(size)).write(to: iconset.appendingPathComponent(name))
 }
 
-try pngData(try squareIcon(size: 1024)).write(to: macResources.appendingPathComponent("UniClip-1024.png"))
-try pngData(statusBarImage(size: 36)).write(to: macResources.appendingPathComponent("StatusBarIconTemplate.png"))
+try pngData(try squareIcon(size: 1024), pixels: 1024).write(to: macResources.appendingPathComponent("UniClip-1024.png"))
+try pngData(statusBarImage(size: 36), pixels: 36).write(to: macResources.appendingPathComponent("StatusBarIconTemplate.png"))
 try writeText(statusSvg, to: macResources.appendingPathComponent("StatusBarIcon.svg"))
 
 let adaptiveIcon = """
@@ -153,7 +202,7 @@ if FileManager.default.fileExists(atPath: oldVectorForeground.path) {
     try FileManager.default.removeItem(at: oldVectorForeground)
 }
 
-try pngData(try squareIcon(size: 432)).write(to: androidDrawable.appendingPathComponent("ic_launcher_foreground.png"))
+try pngData(try squareIcon(size: 432), pixels: 432).write(to: androidDrawable.appendingPathComponent("ic_launcher_foreground.png"))
 try writeText(monochrome, to: androidDrawable.appendingPathComponent("ic_launcher_monochrome.xml"))
 try writeText(adaptiveIcon, to: androidAnyDpi.appendingPathComponent("ic_launcher.xml"))
 try writeText(adaptiveIcon, to: androidAnyDpi.appendingPathComponent("ic_launcher_round.xml"))
@@ -174,8 +223,8 @@ let androidSizes: [(String, CGFloat)] = [
 for (directory, size) in androidSizes {
     let image = try squareIcon(size: size)
     let dir = androidRes.appendingPathComponent(directory)
-    try pngData(image).write(to: dir.appendingPathComponent("ic_launcher.png"))
-    try pngData(image).write(to: dir.appendingPathComponent("ic_launcher_round.png"))
+    try pngData(image, pixels: Int(size)).write(to: dir.appendingPathComponent("ic_launcher.png"))
+    try pngData(image, pixels: Int(size)).write(to: dir.appendingPathComponent("ic_launcher_round.png"))
 }
 
 print("Generated UniClip icons from icons/app-icon.png")

@@ -246,6 +246,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             if let path = Bundle.main.path(forResource: "StatusBarIconTemplate", ofType: "png"),
                let image = NSImage(contentsOfFile: path) {
                 image.isTemplate = true
+                image.size = NSSize(width: 18, height: 18)
                 button.image = image
             } else {
                 button.image = NSImage(
