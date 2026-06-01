@@ -220,11 +220,13 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var receiver: UniClipReceiver?
     private let historyStore = ClipboardHistoryStore.shared
     private let popover = NSPopover()
+    private let hotKeyManager = GlobalHotKeyManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         configurePopover()
         installStatusItem()
+        installHotKey()
         historyStore.startMonitoring()
         startReceiver()
     }
@@ -234,9 +236,22 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         controller.onQuit = { [weak self] in
             self?.quit()
         }
+        controller.onItemCopied = { [weak self] in
+            self?.popover.performClose(nil)
+        }
+        controller.onShortcutChanged = { [weak self] shortcut in
+            self?.hotKeyManager.register(shortcut)
+        }
         popover.contentViewController = controller
         popover.behavior = .transient
         popover.animates = true
+    }
+
+    private func installHotKey() {
+        hotKeyManager.onHotKey = { [weak self] in
+            self?.togglePopover()
+        }
+        hotKeyManager.register(KeyboardShortcut.load())
     }
 
     private func installStatusItem() {

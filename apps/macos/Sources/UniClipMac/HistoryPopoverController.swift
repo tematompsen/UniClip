@@ -2,6 +2,15 @@ import AppKit
 
 @MainActor
 final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
+    private enum Layout {
+        static let width: CGFloat = 500
+        static let height: CGFloat = 720
+        static let inset: CGFloat = 12
+        static let contentWidth: CGFloat = 476
+        static let rowWidth: CGFloat = 476
+        static let scrollHeight: CGFloat = 528
+    }
+
     private let store: ClipboardHistoryStore
     private let searchField = NSSearchField()
     private let scrollView = NSScrollView()
@@ -9,13 +18,16 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     private let listStack = NSStackView()
     private let settingsStack = NSStackView()
     private let limitLabel = NSTextField(labelWithString: "")
+    private let shortcutButton = ShortcutRecorderButton()
     private var query = ""
     var onQuit: (() -> Void)?
+    var onItemCopied: (() -> Void)?
+    var onShortcutChanged: ((KeyboardShortcut) -> Void)?
 
     init(store: ClipboardHistoryStore) {
         self.store = store
         super.init(nibName: nil, bundle: nil)
-        preferredContentSize = NSSize(width: 500, height: 720)
+        preferredContentSize = NSSize(width: Layout.width, height: Layout.height)
     }
 
     required init?(coder: NSCoder) {
@@ -23,7 +35,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 720))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: Layout.width, height: Layout.height))
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         buildView()
@@ -41,10 +53,10 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     private func buildView() {
         let root = NSStackView()
         root.orientation = .vertical
-        root.spacing = 12
+        root.spacing = 8
         root.alignment = .leading
         root.translatesAutoresizingMaskIntoConstraints = false
-        root.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        root.edgeInsets = NSEdgeInsets(top: Layout.inset, left: Layout.inset, bottom: Layout.inset, right: Layout.inset)
         view.addSubview(root)
 
         NSLayoutConstraint.activate([
@@ -59,7 +71,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         header.spacing = 12
         header.alignment = .centerY
         header.translatesAutoresizingMaskIntoConstraints = false
-        header.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        header.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
 
         let title = NSTextField(labelWithString: "UniClip")
         title.font = .systemFont(ofSize: 13, weight: .regular)
@@ -85,8 +97,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.documentView = listContainer
         root.addArrangedSubview(scrollView)
-        scrollView.widthAnchor.constraint(equalToConstant: 468).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 520).isActive = true
+        scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: Layout.scrollHeight).isActive = true
         listContainer.addSubview(listStack)
 
         buildSettings(root)
@@ -99,7 +111,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         settingsStack.isHidden = true
         settingsStack.alignment = .leading
         settingsStack.translatesAutoresizingMaskIntoConstraints = false
-        settingsStack.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        settingsStack.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
 
         limitLabel.font = .systemFont(ofSize: 10, weight: .regular)
         settingsStack.addArrangedSubview(limitLabel)
@@ -108,8 +120,25 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         slider.numberOfTickMarks = 10
         slider.allowsTickMarkValuesOnly = true
         slider.translatesAutoresizingMaskIntoConstraints = false
-        slider.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        slider.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         settingsStack.addArrangedSubview(slider)
+
+        let shortcutRow = NSStackView()
+        shortcutRow.orientation = .horizontal
+        shortcutRow.spacing = 8
+        shortcutRow.alignment = .centerY
+
+        let shortcutLabel = NSTextField(labelWithString: "Вызов окна")
+        shortcutLabel.font = .systemFont(ofSize: 10, weight: .regular)
+        shortcutRow.addArrangedSubview(shortcutLabel)
+
+        shortcutButton.shortcut = KeyboardShortcut.load()
+        shortcutButton.onShortcutChanged = { [weak self] shortcut in
+            shortcut.save()
+            self?.onShortcutChanged?(shortcut)
+        }
+        shortcutRow.addArrangedSubview(shortcutButton)
+        settingsStack.addArrangedSubview(shortcutRow)
 
         root.addArrangedSubview(settingsStack)
         updateLimitLabel()
@@ -119,7 +148,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         let separator = NSBox()
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
-        separator.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        separator.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         root.addArrangedSubview(separator)
 
         let footer = NSStackView()
@@ -127,7 +156,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         footer.spacing = 8
         footer.alignment = .leading
         footer.translatesAutoresizingMaskIntoConstraints = false
-        footer.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        footer.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         root.addArrangedSubview(footer)
 
         footer.addArrangedSubview(actionButton("Очистить всё", action: #selector(clearHistory)))
@@ -142,7 +171,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         button.alignment = .left
         button.font = .systemFont(ofSize: 11, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.widthAnchor.constraint(equalToConstant: 468).isActive = true
+        button.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         button.heightAnchor.constraint(equalToConstant: 28).isActive = true
         return button
     }
@@ -154,34 +183,33 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         }
 
         let items = store.filtered(by: query)
-        let rowWidth: CGFloat = 452
         if items.isEmpty {
             let empty = NSTextField(labelWithString: "История пуста")
             empty.textColor = .secondaryLabelColor
             empty.font = .systemFont(ofSize: 11, weight: .regular)
-            empty.frame = NSRect(x: 8, y: 8, width: rowWidth, height: 28)
+            empty.frame = NSRect(x: 8, y: 8, width: Layout.rowWidth, height: 28)
             listStack.addArrangedSubview(empty)
             updateListFrames(rowHeights: [28])
             return
         }
 
         var heights: [CGFloat] = []
-        for (index, item) in items.enumerated() {
+        for item in items {
             let height = itemHeight(item)
             heights.append(height)
-            listStack.addArrangedSubview(row(for: item, width: rowWidth, highlighted: index == 0))
+            listStack.addArrangedSubview(row(for: item, width: Layout.rowWidth))
         }
         updateListFrames(rowHeights: heights)
     }
 
     private func updateListFrames(rowHeights: [CGFloat]) {
         let totalHeight = max(rowHeights.reduce(0, +) + CGFloat(max(0, rowHeights.count - 1)) * listStack.spacing, scrollView.contentSize.height)
-        listContainer.frame = NSRect(x: 0, y: 0, width: 468, height: totalHeight)
-        listStack.frame = NSRect(x: 0, y: 0, width: 468, height: totalHeight)
+        listContainer.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth, height: totalHeight)
+        listStack.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth, height: totalHeight)
         listStack.needsLayout = true
     }
 
-    private func row(for item: ClipboardHistoryItem, width: CGFloat, highlighted: Bool) -> NSView {
+    private func row(for item: ClipboardHistoryItem, width: CGFloat) -> NSView {
         let button = HistoryRowButton(item: item)
         button.target = self
         button.action = #selector(copyHistoryItem(_:))
@@ -189,7 +217,6 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         button.isBordered = false
         button.wantsLayer = true
         button.layer?.cornerRadius = 6
-        button.layer?.backgroundColor = highlighted ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
         button.translatesAutoresizingMaskIntoConstraints = false
         button.widthAnchor.constraint(equalToConstant: width).isActive = true
         button.heightAnchor.constraint(equalToConstant: itemHeight(item)).isActive = true
@@ -212,9 +239,9 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         switch item.payload {
         case .text(let text):
             let label = NSTextField(labelWithString: text.replacingOccurrences(of: "\n", with: " "))
-            label.textColor = highlighted ? .white : .labelColor
             label.font = .systemFont(ofSize: 11, weight: .regular)
             label.lineBreakMode = .byTruncatingMiddle
+            button.highlightTextFields.append(label)
             row.addArrangedSubview(label)
         case .image(let image, _):
             let imageView = NSImageView()
@@ -226,8 +253,9 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
             row.addArrangedSubview(imageView)
 
             let label = NSTextField(labelWithString: "Изображение")
-            label.textColor = highlighted ? .white : .secondaryLabelColor
+            label.textColor = .secondaryLabelColor
             label.font = .systemFont(ofSize: 11, weight: .regular)
+            button.highlightTextFields.append(label)
             row.addArrangedSubview(label)
         }
 
@@ -250,6 +278,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
 
     @objc private func copyHistoryItem(_ sender: HistoryRowButton) {
         store.copyToPasteboard(sender.item)
+        onItemCopied?()
     }
 
     @objc private func clearHistory() {
@@ -281,6 +310,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
 @MainActor
 final class HistoryRowButton: NSButton {
     let item: ClipboardHistoryItem
+    var highlightTextFields: [NSTextField] = []
+    private var trackingAreaRef: NSTrackingArea?
 
     init(item: ClipboardHistoryItem) {
         self.item = item
@@ -291,10 +322,85 @@ final class HistoryRowButton: NSButton {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingAreaRef {
+            removeTrackingArea(trackingAreaRef)
+        }
+        let area = NSTrackingArea(rect: bounds, options: [.activeAlways, .mouseEnteredAndExited, .inVisibleRect], owner: self)
+        addTrackingArea(area)
+        trackingAreaRef = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        setHover(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        setHover(false)
+    }
+
+    private func setHover(_ isHovering: Bool) {
+        layer?.backgroundColor = isHovering ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
+        highlightTextFields.forEach {
+            $0.textColor = isHovering ? .white : .labelColor
+        }
+    }
 }
 
 final class FlippedView: NSView {
     override var isFlipped: Bool {
         true
+    }
+}
+
+@MainActor
+final class ShortcutRecorderButton: NSButton {
+    var shortcut: KeyboardShortcut = .defaultShortcut {
+        didSet {
+            title = shortcut.displayName
+        }
+    }
+    var onShortcutChanged: ((KeyboardShortcut) -> Void)?
+    private var isRecording = false
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        isBordered = false
+        font = .systemFont(ofSize: 11, weight: .regular)
+        target = self
+        action = #selector(startRecording)
+        title = shortcut.displayName
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var acceptsFirstResponder: Bool {
+        true
+    }
+
+    @objc private func startRecording() {
+        isRecording = true
+        title = "Нажмите сочетание"
+        window?.makeFirstResponder(self)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        guard isRecording else {
+            super.keyDown(with: event)
+            return
+        }
+
+        guard let newShortcut = KeyboardShortcut.from(event: event) else {
+            NSSound.beep()
+            return
+        }
+
+        isRecording = false
+        shortcut = newShortcut
+        onShortcutChanged?(newShortcut)
     }
 }
