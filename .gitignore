@@ -21,3 +21,7 @@ xcuserdata/
 
 # SwiftPM
 .build/
+
+# Local toolchains and build artifacts
+.toolchains/
+dist/

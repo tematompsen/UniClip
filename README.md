@@ -44,3 +44,5 @@ scripts/check.sh
 ```
 
 Android build requires JDK and Android SDK.
+
+Device testing steps are in [docs/DEVICE_TESTING.md](docs/DEVICE_TESTING.md).
