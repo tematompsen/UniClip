@@ -25,3 +25,4 @@ xcuserdata/
 # Local toolchains and build artifacts
 .toolchains/
 dist/
+builds/
