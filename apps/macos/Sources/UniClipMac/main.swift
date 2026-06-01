@@ -215,36 +215,57 @@ final class UniClipReceiver: @unchecked Sendable {
 }
 
 @MainActor
+final class HistoryPanel: NSPanel {
+    override var canBecomeKey: Bool {
+        true
+    }
+}
+
+@MainActor
 final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var receiver: UniClipReceiver?
     private let historyStore = ClipboardHistoryStore.shared
-    private let popover = NSPopover()
+    private var historyController: HistoryPopoverController?
+    private var historyPanel: HistoryPanel?
+    private var eventMonitor: Any?
     private let hotKeyManager = GlobalHotKeyManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        configurePopover()
+        configureHistoryPanel()
         installStatusItem()
         installHotKey()
         historyStore.startMonitoring()
         startReceiver()
     }
 
-    private func configurePopover() {
+    private func configureHistoryPanel() {
         let controller = HistoryPopoverController(store: historyStore)
         controller.onQuit = { [weak self] in
             self?.quit()
         }
         controller.onItemCopied = { [weak self] in
-            self?.popover.performClose(nil)
+            self?.closeHistoryPanel()
         }
         controller.onShortcutChanged = { [weak self] shortcut in
             self?.hotKeyManager.register(shortcut)
         }
-        popover.contentViewController = controller
-        popover.behavior = .transient
-        popover.animates = true
+        historyController = controller
+
+        let panel = HistoryPanel(
+            contentRect: NSRect(origin: .zero, size: controller.preferredContentSize),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.contentViewController = controller
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
+        panel.level = .popUpMenu
+        panel.isReleasedWhenClosed = false
+        historyPanel = panel
     }
 
     private func installHotKey() {
@@ -261,7 +282,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             if let path = Bundle.main.path(forResource: "StatusBarIconTemplate", ofType: "png"),
                let image = NSImage(contentsOfFile: path) {
                 image.isTemplate = true
-                image.size = NSSize(width: 22, height: 22)
+                image.size = NSSize(width: 20, height: 20)
                 button.image = image
             } else {
                 button.image = NSImage(
@@ -302,11 +323,54 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        if popover.isShown {
-            popover.performClose(nil)
+        if historyPanel?.isVisible == true {
+            closeHistoryPanel()
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            showHistoryPanel(relativeTo: button)
+        }
+    }
+
+    private func showHistoryPanel(relativeTo button: NSStatusBarButton) {
+        guard let panel = historyPanel else {
+            return
+        }
+
+        let buttonRect = button.convert(button.bounds, to: nil)
+        guard let screenRect = button.window?.convertToScreen(buttonRect) else {
+            return
+        }
+
+        let panelSize = panel.frame.size
+        let visibleFrame = button.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
+        var x = screenRect.midX - panelSize.width / 2
+        x = min(max(x, visibleFrame.minX + 8), visibleFrame.maxX - panelSize.width - 8)
+        let y = screenRect.minY - panelSize.height - 8
+
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        panel.contentViewController?.view.window?.makeFirstResponder(historyController?.searchFieldForFocus)
+        installEventMonitor()
+    }
+
+    private func closeHistoryPanel() {
+        historyPanel?.orderOut(nil)
+        removeEventMonitor()
+    }
+
+    private func installEventMonitor() {
+        removeEventMonitor()
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            Task { @MainActor in
+                self?.closeHistoryPanel()
+            }
+        }
+    }
+
+    private func removeEventMonitor() {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
         }
     }
 

@@ -103,56 +103,75 @@ func statusBarImage(size: CGFloat) -> NSImage {
     NSColor.clear.setFill()
     NSRect(x: 0, y: 0, width: size, height: size).fill()
 
-    let scale = size / 24.0
-    let inset = size * 0.12
+    let viewWidth: CGFloat = 607
+    let viewHeight: CGFloat = 693
+    let scale = size * 0.88 / viewHeight
+    let xOffset = (size - viewWidth * scale) / 2
+    let yOffset = (size - viewHeight * scale) / 2
 
     func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
-        NSPoint(x: inset + x * scale * 0.76, y: size - inset - y * scale * 0.76)
+        NSPoint(x: xOffset + x * scale, y: size - yOffset - y * scale)
     }
 
-    NSColor.black.setStroke()
+    NSColor.black.setFill()
     let path = NSBezierPath()
-    path.lineWidth = max(1.5, size * 0.065)
-    path.lineCapStyle = .round
-    path.lineJoinStyle = .round
+    path.windingRule = .evenOdd
 
-    path.move(to: point(16.964, 8.982))
-    path.curve(to: point(16.058, 3.458), controlPoint1: point(16.961, 6.032), controlPoint2: point(16.917, 4.504))
-    path.curve(to: point(15.505, 2.904), controlPoint1: point(15.892, 3.256), controlPoint2: point(15.707, 3.070))
-    path.curve(to: point(9.480, 2.000), controlPoint1: point(14.400, 2.000), controlPoint2: point(12.760, 2.000))
-    path.curve(to: point(3.456, 2.905), controlPoint1: point(6.200, 2.000), controlPoint2: point(4.560, 2.000))
-    path.curve(to: point(2.903, 3.459), controlPoint1: point(3.254, 3.071), controlPoint2: point(3.069, 3.257))
-    path.curve(to: point(1.998, 9.480), controlPoint1: point(1.998, 4.560), controlPoint2: point(1.998, 6.200))
-    path.curve(to: point(2.904, 15.503), controlPoint1: point(1.998, 12.760), controlPoint2: point(1.998, 14.400))
-    path.curve(to: point(3.457, 16.056), controlPoint1: point(3.071, 15.706), controlPoint2: point(3.255, 15.890))
-    path.curve(to: point(8.982, 16.962), controlPoint1: point(4.503, 16.916), controlPoint2: point(6.032, 16.960))
+    path.move(to: point(216.5, 86.6))
+    path.curve(to: point(124.647, 124.647), controlPoint1: point(182.048, 86.6), controlPoint2: point(149.008, 100.286))
+    path.curve(to: point(86.6, 216.5), controlPoint1: point(100.286, 149.008), controlPoint2: point(86.6, 182.048))
+    path.line(to: point(86.6, 389.7))
+    path.curve(to: point(150.011, 542.789), controlPoint1: point(86.6, 447.119), controlPoint2: point(109.41, 502.187))
+    path.curve(to: point(303.1, 606.2), controlPoint1: point(190.613, 583.39), controlPoint2: point(245.681, 606.2))
+    path.curve(to: point(456.189, 542.789), controlPoint1: point(360.519, 606.2), controlPoint2: point(415.587, 583.39))
+    path.curve(to: point(519.6, 389.7), controlPoint1: point(496.79, 502.187), controlPoint2: point(519.6, 447.119))
+    path.line(to: point(519.6, 216.5))
+    path.curve(to: point(532.282, 185.882), controlPoint1: point(519.6, 205.016), controlPoint2: point(524.162, 194.003))
+    path.curve(to: point(562.9, 173.2), controlPoint1: point(540.403, 177.762), controlPoint2: point(551.416, 173.2))
+    path.curve(to: point(593.518, 185.882), controlPoint1: point(574.384, 173.2), controlPoint2: point(585.397, 177.762))
+    path.curve(to: point(606.2, 216.5), controlPoint1: point(601.638, 194.003), controlPoint2: point(606.2, 205.016))
+    path.line(to: point(606.2, 389.7))
+    path.curve(to: point(583.128, 505.691), controlPoint1: point(606.2, 429.504), controlPoint2: point(598.36, 468.918))
+    path.curve(to: point(517.424, 604.024), controlPoint1: point(567.896, 542.465), controlPoint2: point(545.57, 575.879))
+    path.curve(to: point(419.091, 669.728), controlPoint1: point(489.279, 632.169), controlPoint2: point(455.865, 654.496))
+    path.curve(to: point(303.1, 692.8), controlPoint1: point(382.318, 684.96), controlPoint2: point(342.904, 692.8))
+    path.curve(to: point(187.109, 669.728), controlPoint1: point(263.296, 692.8), controlPoint2: point(223.882, 684.96))
+    path.curve(to: point(88.7759, 604.024), controlPoint1: point(150.335, 654.496), controlPoint2: point(116.921, 632.169))
+    path.curve(to: point(23.0721, 505.691), controlPoint1: point(60.6305, 575.879), controlPoint2: point(38.3043, 542.465))
+    path.curve(to: point(0, 389.7), controlPoint1: point(7.83992, 468.918), controlPoint2: point(0, 429.504))
+    path.line(to: point(0, 216.5))
+    path.curve(to: point(63.4114, 63.4114), controlPoint1: point(0, 159.081), controlPoint2: point(22.8098, 104.013))
+    path.curve(to: point(216.5, 0), controlPoint1: point(104.013, 22.8098), controlPoint2: point(159.081, 0))
+    path.curve(to: point(369.589, 63.4114), controlPoint1: point(273.919, 0), controlPoint2: point(328.987, 22.8098))
+    path.curve(to: point(433, 216.5), controlPoint1: point(410.19, 104.013), controlPoint2: point(433, 159.081))
+    path.line(to: point(433, 389.7))
+    path.curve(to: point(394.953, 481.553), controlPoint1: point(433, 424.152), controlPoint2: point(419.314, 457.192))
+    path.curve(to: point(303.1, 519.6), controlPoint1: point(370.592, 505.914), controlPoint2: point(337.552, 519.6))
+    path.curve(to: point(211.247, 481.553), controlPoint1: point(268.648, 519.6), controlPoint2: point(235.608, 505.914))
+    path.curve(to: point(173.2, 389.7), controlPoint1: point(186.886, 457.192), controlPoint2: point(173.2, 424.152))
+    path.line(to: point(173.2, 216.5))
+    path.curve(to: point(185.882, 185.882), controlPoint1: point(173.2, 205.016), controlPoint2: point(177.762, 194.003))
+    path.curve(to: point(216.5, 173.2), controlPoint1: point(194.003, 177.762), controlPoint2: point(205.016, 173.2))
+    path.curve(to: point(247.118, 185.882), controlPoint1: point(227.984, 173.2), controlPoint2: point(238.997, 177.762))
+    path.curve(to: point(259.8, 216.5), controlPoint1: point(255.238, 194.003), controlPoint2: point(259.8, 205.016))
+    path.line(to: point(259.8, 389.7))
+    path.curve(to: point(272.482, 420.318), controlPoint1: point(259.8, 401.184), controlPoint2: point(264.362, 412.197))
+    path.curve(to: point(303.1, 433), controlPoint1: point(280.603, 428.438), controlPoint2: point(291.616, 433))
+    path.curve(to: point(333.718, 420.318), controlPoint1: point(314.584, 433), controlPoint2: point(325.597, 428.438))
+    path.curve(to: point(346.4, 389.7), controlPoint1: point(341.838, 412.197), controlPoint2: point(346.4, 401.184))
+    path.line(to: point(346.4, 216.5))
+    path.curve(to: point(308.353, 124.647), controlPoint1: point(346.4, 182.048), controlPoint2: point(332.714, 149.008))
+    path.curve(to: point(216.5, 86.6), controlPoint1: point(283.992, 100.286), controlPoint2: point(250.952, 86.6))
+    path.close()
 
-    path.move(to: point(14.028, 9.025))
-    path.line(to: point(16.994, 8.982))
-    path.move(to: point(14.014, 22.002))
-    path.line(to: point(16.980, 21.959))
-    path.move(to: point(21.972, 14.022))
-    path.line(to: point(21.944, 16.982))
-    path.move(to: point(9.010, 14.036))
-    path.line(to: point(8.982, 16.996))
-    path.move(to: point(11.487, 9.025))
-    path.curve(to: point(9.010, 11.049), controlPoint1: point(10.655, 9.174), controlPoint2: point(9.317, 9.327))
-    path.move(to: point(19.495, 21.959))
-    path.curve(to: point(22.003, 19.973), controlPoint1: point(20.330, 21.822), controlPoint2: point(21.669, 21.689))
-    path.move(to: point(19.495, 9.025))
-    path.curve(to: point(21.972, 11.049), controlPoint1: point(20.327, 9.174), controlPoint2: point(21.665, 9.327))
-    path.move(to: point(11.500, 21.957))
-    path.curve(to: point(9.022, 19.934), controlPoint1: point(10.667, 21.809), controlPoint2: point(9.330, 21.656))
-
-    path.stroke()
+    path.fill()
     image.unlockFocus()
     return image
 }
 
 let statusSvg = """
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M16.964 8.982C16.961 6.032 16.917 4.504 16.058 3.458C15.8923 3.2557 15.707 3.07014 15.505 2.904C14.4 2 12.76 2 9.48005 2C6.20005 2 4.56005 2 3.45605 2.905C3.25404 3.07114 3.06882 3.2567 2.90305 3.459C1.99805 4.56 1.99805 6.2 1.99805 9.48C1.99805 12.76 1.99805 14.4 2.90405 15.503C3.07071 15.7057 3.25505 15.89 3.45705 16.056C4.50305 16.916 6.03205 16.96 8.98205 16.962" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M14.0284 9.02542L16.9944 8.98242M14.0144 22.0024L16.9804 21.9594M21.9724 14.0224L21.9444 16.9824M9.01042 14.0364L8.98242 16.9964M11.4874 9.02542C10.6554 9.17442 9.31742 9.32742 9.01042 11.0494M19.4954 21.9594C20.3304 21.8224 21.6694 21.6894 22.0034 19.9734M19.4954 9.02542C20.3274 9.17442 21.6654 9.32742 21.9724 11.0494M11.5004 21.9574C10.6674 21.8094 9.33042 21.6564 9.02242 19.9344" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="607" height="693" viewBox="0 0 607 693" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M216.5 86.6C182.048 86.6 149.008 100.286 124.647 124.647C100.286 149.008 86.6 182.048 86.6 216.5V389.7C86.6 447.119 109.41 502.187 150.011 542.789C190.613 583.39 245.681 606.2 303.1 606.2C360.519 606.2 415.587 583.39 456.189 542.789C496.79 502.187 519.6 447.119 519.6 389.7V216.5C519.6 205.016 524.162 194.003 532.282 185.882C540.403 177.762 551.416 173.2 562.9 173.2C574.384 173.2 585.397 177.762 593.518 185.882C601.638 194.003 606.2 205.016 606.2 216.5V389.7C606.2 429.504 598.36 468.918 583.128 505.691C567.896 542.465 545.57 575.879 517.424 604.024C489.279 632.169 455.865 654.496 419.091 669.728C382.318 684.96 342.904 692.8 303.1 692.8C263.296 692.8 223.882 684.96 187.109 669.728C150.335 654.496 116.921 632.169 88.7759 604.024C60.6305 575.879 38.3043 542.465 23.0721 505.691C7.83992 468.918 -5.9312e-07 429.504 0 389.7V216.5C0 159.081 22.8098 104.013 63.4114 63.4114C104.013 22.8098 159.081 0 216.5 0C273.919 0 328.987 22.8098 369.589 63.4114C410.19 104.013 433 159.081 433 216.5V389.7C433 424.152 419.314 457.192 394.953 481.553C370.592 505.914 337.552 519.6 303.1 519.6C268.648 519.6 235.608 505.914 211.247 481.553C186.886 457.192 173.2 424.152 173.2 389.7V216.5C173.2 205.016 177.762 194.003 185.882 185.882C194.003 177.762 205.016 173.2 216.5 173.2C227.984 173.2 238.997 177.762 247.118 185.882C255.238 194.003 259.8 205.016 259.8 216.5V389.7C259.8 401.184 264.362 412.197 272.482 420.318C280.603 428.438 291.616 433 303.1 433C314.584 433 325.597 428.438 333.718 420.318C341.838 412.197 346.4 401.184 346.4 389.7V216.5C346.4 182.048 332.714 149.008 308.353 124.647C283.992 100.286 250.952 86.6 216.5 86.6Z" fill="black"/>
 </svg>
 """
 

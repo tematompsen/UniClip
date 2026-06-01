@@ -6,9 +6,9 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         static let width: CGFloat = 500
         static let height: CGFloat = 720
         static let inset: CGFloat = 12
+        static let bottomInset: CGFloat = 6
         static let contentWidth: CGFloat = 476
         static let rowWidth: CGFloat = 476
-        static let scrollHeight: CGFloat = 528
     }
 
     private let store: ClipboardHistoryStore
@@ -23,6 +23,9 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     var onQuit: (() -> Void)?
     var onItemCopied: (() -> Void)?
     var onShortcutChanged: ((KeyboardShortcut) -> Void)?
+    var searchFieldForFocus: NSView {
+        searchField
+    }
 
     init(store: ClipboardHistoryStore) {
         self.store = store
@@ -38,6 +41,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         view = NSView(frame: NSRect(x: 0, y: 0, width: Layout.width, height: Layout.height))
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        view.layer?.cornerRadius = 18
+        view.layer?.masksToBounds = true
         buildView()
         store.onChange = { [weak self] in
             self?.reload()
@@ -53,10 +58,11 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     private func buildView() {
         let root = NSStackView()
         root.orientation = .vertical
+        root.distribution = .fill
         root.spacing = 8
         root.alignment = .leading
         root.translatesAutoresizingMaskIntoConstraints = false
-        root.edgeInsets = NSEdgeInsets(top: Layout.inset, left: Layout.inset, bottom: Layout.inset, right: Layout.inset)
+        root.edgeInsets = NSEdgeInsets(top: Layout.inset, left: Layout.inset, bottom: Layout.bottomInset, right: Layout.inset)
         view.addSubview(root)
 
         NSLayoutConstraint.activate([
@@ -72,6 +78,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         header.alignment = .centerY
         header.translatesAutoresizingMaskIntoConstraints = false
         header.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        header.setContentHuggingPriority(.required, for: .vertical)
+        header.setContentCompressionResistancePriority(.required, for: .vertical)
 
         let title = NSTextField(labelWithString: "UniClip")
         title.font = .systemFont(ofSize: 13, weight: .regular)
@@ -96,9 +104,11 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         scrollView.drawsBackground = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.documentView = listContainer
+        scrollView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        scrollView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         root.addArrangedSubview(scrollView)
         scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: Layout.scrollHeight).isActive = true
+        scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 360).isActive = true
         listContainer.addSubview(listStack)
 
         buildSettings(root)
@@ -112,6 +122,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         settingsStack.alignment = .leading
         settingsStack.translatesAutoresizingMaskIntoConstraints = false
         settingsStack.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        settingsStack.setContentHuggingPriority(.required, for: .vertical)
+        settingsStack.setContentCompressionResistancePriority(.required, for: .vertical)
 
         limitLabel.font = .systemFont(ofSize: 10, weight: .regular)
         settingsStack.addArrangedSubview(limitLabel)
@@ -149,14 +161,19 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         separator.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        separator.setContentHuggingPriority(.required, for: .vertical)
+        separator.setContentCompressionResistancePriority(.required, for: .vertical)
         root.addArrangedSubview(separator)
 
         let footer = NSStackView()
         footer.orientation = .vertical
-        footer.spacing = 8
+        footer.spacing = 2
         footer.alignment = .leading
         footer.translatesAutoresizingMaskIntoConstraints = false
         footer.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        footer.heightAnchor.constraint(equalToConstant: 78).isActive = true
+        footer.setContentHuggingPriority(.required, for: .vertical)
+        footer.setContentCompressionResistancePriority(.required, for: .vertical)
         root.addArrangedSubview(footer)
 
         footer.addArrangedSubview(actionButton("Очистить всё", action: #selector(clearHistory)))
@@ -172,7 +189,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         button.font = .systemFont(ofSize: 11, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 18).isActive = true
         return button
     }
 
@@ -224,16 +241,16 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 10
+        row.spacing = 6
         row.translatesAutoresizingMaskIntoConstraints = false
-        row.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
+        row.edgeInsets = NSEdgeInsets(top: 2, left: 4, bottom: 2, right: 4)
         button.addSubview(row)
 
         NSLayoutConstraint.activate([
-            row.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
-            row.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8),
-            row.topAnchor.constraint(equalTo: button.topAnchor, constant: 4),
-            row.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -4)
+            row.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 4),
+            row.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -4),
+            row.topAnchor.constraint(equalTo: button.topAnchor, constant: 2),
+            row.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -2)
         ])
 
         switch item.payload {
@@ -248,8 +265,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
             imageView.image = image
             imageView.imageScaling = .scaleProportionallyUpOrDown
             imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.widthAnchor.constraint(equalToConstant: 54).isActive = true
-            imageView.heightAnchor.constraint(equalToConstant: 54).isActive = true
+            imageView.widthAnchor.constraint(equalToConstant: 48).isActive = true
+            imageView.heightAnchor.constraint(equalToConstant: 48).isActive = true
             row.addArrangedSubview(imageView)
 
             let label = NSTextField(labelWithString: "Изображение")
@@ -265,9 +282,9 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     private func itemHeight(_ item: ClipboardHistoryItem) -> CGFloat {
         switch item.payload {
         case .text:
-            return 40
+            return 32
         case .image:
-            return 72
+            return 58
         }
     }
 
@@ -305,6 +322,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
     private func updateLimitLabel() {
         limitLabel.stringValue = "Сохранять последних: \(store.limit)"
     }
+
 }
 
 @MainActor
