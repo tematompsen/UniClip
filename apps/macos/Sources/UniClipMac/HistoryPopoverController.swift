@@ -62,15 +62,15 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         header.widthAnchor.constraint(equalToConstant: 468).isActive = true
 
         let title = NSTextField(labelWithString: "UniClip")
-        title.font = .boldSystemFont(ofSize: 18)
+        title.font = .systemFont(ofSize: 13, weight: .regular)
         title.setContentHuggingPriority(.required, for: .horizontal)
         header.addArrangedSubview(title)
 
         searchField.placeholderString = "начните печатать для поиска..."
         searchField.delegate = self
-        searchField.font = .systemFont(ofSize: 17)
+        searchField.font = .systemFont(ofSize: 12, weight: .regular)
         searchField.translatesAutoresizingMaskIntoConstraints = false
-        searchField.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        searchField.heightAnchor.constraint(equalToConstant: 24).isActive = true
         header.addArrangedSubview(searchField)
         root.addArrangedSubview(header)
 
@@ -101,7 +101,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         settingsStack.translatesAutoresizingMaskIntoConstraints = false
         settingsStack.widthAnchor.constraint(equalToConstant: 468).isActive = true
 
-        limitLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        limitLabel.font = .systemFont(ofSize: 10, weight: .regular)
         settingsStack.addArrangedSubview(limitLabel)
 
         let slider = NSSlider(value: Double(store.limit), minValue: 10, maxValue: 100, target: self, action: #selector(limitChanged(_:)))
@@ -140,7 +140,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         let button = NSButton(title: title, target: self, action: action)
         button.isBordered = false
         button.alignment = .left
-        button.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.font = .systemFont(ofSize: 11, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.widthAnchor.constraint(equalToConstant: 468).isActive = true
         button.heightAnchor.constraint(equalToConstant: 28).isActive = true
@@ -158,7 +158,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         if items.isEmpty {
             let empty = NSTextField(labelWithString: "История пуста")
             empty.textColor = .secondaryLabelColor
-            empty.font = .systemFont(ofSize: 16)
+            empty.font = .systemFont(ofSize: 11, weight: .regular)
             empty.frame = NSRect(x: 8, y: 8, width: rowWidth, height: 28)
             listStack.addArrangedSubview(empty)
             updateListFrames(rowHeights: [28])
@@ -169,7 +169,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         for (index, item) in items.enumerated() {
             let height = itemHeight(item)
             heights.append(height)
-            listStack.addArrangedSubview(row(for: item, shortcut: index < 9 ? "⇧⌘ \(index + 1)" : nil, width: rowWidth, highlighted: index == 0))
+            listStack.addArrangedSubview(row(for: item, width: rowWidth, highlighted: index == 0))
         }
         updateListFrames(rowHeights: heights)
     }
@@ -181,7 +181,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         listStack.needsLayout = true
     }
 
-    private func row(for item: ClipboardHistoryItem, shortcut: String?, width: CGFloat, highlighted: Bool) -> NSView {
+    private func row(for item: ClipboardHistoryItem, width: CGFloat, highlighted: Bool) -> NSView {
         let button = HistoryRowButton(item: item)
         button.target = self
         button.action = #selector(copyHistoryItem(_:))
@@ -213,7 +213,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
         case .text(let text):
             let label = NSTextField(labelWithString: text.replacingOccurrences(of: "\n", with: " "))
             label.textColor = highlighted ? .white : .labelColor
-            label.font = .systemFont(ofSize: 15, weight: .semibold)
+            label.font = .systemFont(ofSize: 11, weight: .regular)
             label.lineBreakMode = .byTruncatingMiddle
             row.addArrangedSubview(label)
         case .image(let image, _):
@@ -227,16 +227,8 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
 
             let label = NSTextField(labelWithString: "Изображение")
             label.textColor = highlighted ? .white : .secondaryLabelColor
-            label.font = .systemFont(ofSize: 15, weight: .medium)
+            label.font = .systemFont(ofSize: 11, weight: .regular)
             row.addArrangedSubview(label)
-        }
-
-        if let shortcut {
-            let shortcutLabel = NSTextField(labelWithString: shortcut)
-            shortcutLabel.textColor = highlighted ? .white : .secondaryLabelColor
-            shortcutLabel.font = .monospacedSystemFont(ofSize: 15, weight: .medium)
-            shortcutLabel.setContentHuggingPriority(.required, for: .horizontal)
-            row.addArrangedSubview(shortcutLabel)
         }
 
         return button
