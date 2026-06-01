@@ -218,14 +218,28 @@ final class UniClipReceiver: @unchecked Sendable {
 final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var receiver: UniClipReceiver?
+    private let historyStore = ClipboardHistoryStore.shared
+    private let popover = NSPopover()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        installStatusMenu()
+        configurePopover()
+        installStatusItem()
+        historyStore.startMonitoring()
         startReceiver()
     }
 
-    private func installStatusMenu() {
+    private func configurePopover() {
+        let controller = HistoryPopoverController(store: historyStore)
+        controller.onQuit = { [weak self] in
+            self?.quit()
+        }
+        popover.contentViewController = controller
+        popover.behavior = .transient
+        popover.animates = true
+    }
+
+    private func installStatusItem() {
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
@@ -241,16 +255,9 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
                 button.image?.isTemplate = true
             }
             button.toolTip = "UniClip"
+            button.target = self
+            button.action = #selector(togglePopover)
         }
-
-        let menu = NSMenu()
-        let titleItem = NSMenuItem(title: "UniClip", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Закрыть", action: #selector(quit), keyEquivalent: "q"))
-
-        statusItem.menu = menu
         self.statusItem = statusItem
     }
 
@@ -272,6 +279,19 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "Quit")
         alert.runModal()
         NSApp.terminate(nil)
+    }
+
+    @objc private func togglePopover() {
+        guard let button = statusItem?.button else {
+            return
+        }
+
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
     }
 
     @objc private func quit() {

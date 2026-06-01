@@ -22,6 +22,7 @@ Development baseline:
 - macOS SwiftPM receiver prototype in `apps/macos`.
 - Android Kotlin/Compose sender scaffold in `apps/android`.
 - Prototype protocol in `protocol`.
+- macOS menu bar popover with clipboard history and history size setting.
 
 ## Local Prototype
 
