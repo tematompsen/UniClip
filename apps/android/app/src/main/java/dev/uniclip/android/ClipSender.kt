@@ -1,6 +1,7 @@
 package dev.uniclip.android
 
 import android.os.Build
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.InetSocketAddress
@@ -61,12 +62,29 @@ class ClipSender {
                         output.write('\n'.code)
                         output.flush()
                         val ack = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
-                        onResult("${computer.name}: ${ack ?: "sent"}")
+                        onResult(formatResult(computer, ack))
                     }
                 }.onFailure {
                     onResult("${computer.name}: ${it.message ?: "send failed"}")
                 }
             }
+        }
+    }
+
+    private fun formatResult(computer: TrustedComputer, ack: String?): String {
+        if (ack.isNullOrBlank()) return "✅"
+
+        return runCatching {
+            val json = JSONObject(ack)
+            val status = json.optString("status")
+            val detail = json.optString("detail")
+            when (status) {
+                "ok", "duplicate" -> "✅"
+                "error" -> "${computer.name}: ${detail.ifBlank { "send failed" }}"
+                else -> "${computer.name}: send failed"
+            }
+        }.getOrElse {
+            "${computer.name}: send failed"
         }
     }
 }
