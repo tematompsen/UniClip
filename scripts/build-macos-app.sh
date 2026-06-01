@@ -5,13 +5,18 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="$ROOT/dist/macOS/UniClip.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
+RESOURCES="$CONTENTS/Resources"
 
+(cd "$ROOT" && scripts/generate-icons.swift >/dev/null)
+iconutil -c icns "$ROOT/apps/macos/Resources/UniClip.iconset" -o "$ROOT/apps/macos/Resources/UniClip.icns"
 swift build --package-path "$ROOT/apps/macos" -c release
 
 rm -rf "$APP_DIR"
-mkdir -p "$MACOS"
+mkdir -p "$MACOS" "$RESOURCES"
 
 cp "$ROOT/apps/macos/.build/release/uniclip-mac" "$MACOS/UniClip"
+cp "$ROOT/apps/macos/Resources/UniClip.icns" "$RESOURCES/UniClip.icns"
+cp "$ROOT/apps/macos/Resources/StatusBarIconTemplate.png" "$RESOURCES/StatusBarIconTemplate.png"
 cat > "$CONTENTS/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -24,6 +29,8 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
   <string>UniClip</string>
   <key>CFBundleIdentifier</key>
   <string>dev.uniclip.mac</string>
+  <key>CFBundleIconFile</key>
+  <string>UniClip</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>

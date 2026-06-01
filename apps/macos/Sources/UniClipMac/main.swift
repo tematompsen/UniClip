@@ -229,11 +229,17 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "doc.on.clipboard",
-                accessibilityDescription: "UniClip"
-            )
-            button.image?.isTemplate = true
+            if let path = Bundle.main.path(forResource: "StatusBarIconTemplate", ofType: "png"),
+               let image = NSImage(contentsOfFile: path) {
+                image.isTemplate = true
+                button.image = image
+            } else {
+                button.image = NSImage(
+                    systemSymbolName: "doc.on.clipboard",
+                    accessibilityDescription: "UniClip"
+                )
+                button.image?.isTemplate = true
+            }
             button.toolTip = "UniClip"
         }
 
