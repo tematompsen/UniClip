@@ -17,4 +17,30 @@ UniClip lets an Android device send selected text and shared images/files to all
 
 ## Current State
 
-Planning baseline only. See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Development baseline:
+
+- macOS SwiftPM receiver prototype in `apps/macos`.
+- Android Kotlin/Compose sender scaffold in `apps/android`.
+- Prototype protocol in `protocol`.
+
+## Local Prototype
+
+Run macOS receiver:
+
+```sh
+scripts/run-macos-receiver.sh
+```
+
+Send test text from same Mac:
+
+```sh
+scripts/send-test-clip.swift "hello from UniClip"
+```
+
+Run checks:
+
+```sh
+scripts/check.sh
+```
+
+Android build requires JDK and Android SDK.
