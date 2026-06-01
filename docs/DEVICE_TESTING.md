@@ -76,5 +76,4 @@ hello from test
 
 - Transport is plain TCP/JSON.
 - Pairing approval and encryption are not implemented yet.
-- Images from Android share sheet are recognized but not transferred yet.
-- macOS receiver has no menu bar UI yet.
+- macOS receiver has a menu bar icon with a quit action, but no settings window yet.

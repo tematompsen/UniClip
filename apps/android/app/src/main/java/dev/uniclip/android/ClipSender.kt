@@ -20,12 +20,35 @@ class ClipSender {
             return
         }
 
+        sendToAll(computers, "text/plain", text, onResult)
+    }
+
+    fun sendImageToAll(
+        computers: List<TrustedComputer>,
+        contentType: String,
+        base64Payload: String,
+        onResult: (String) -> Unit,
+    ) {
+        sendToAll(computers, contentType, base64Payload, onResult)
+    }
+
+    private fun sendToAll(
+        computers: List<TrustedComputer>,
+        contentType: String,
+        payload: String,
+        onResult: (String) -> Unit,
+    ) {
+        if (computers.isEmpty()) {
+            onResult("No trusted Macs")
+            return
+        }
+
         val deviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
         val message = ClipMessage(
             sourceDeviceId = "android-${Build.ID}",
             sourceDeviceName = deviceName,
-            contentType = "text/plain",
-            payload = text,
+            contentType = contentType,
+            payload = payload,
         )
 
         computers.forEach { computer ->

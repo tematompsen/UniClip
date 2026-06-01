@@ -4,17 +4,23 @@ import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -25,16 +31,25 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val activity = this
 
         setContent {
             MaterialTheme {
                 Surface {
-                    UniClipScreen(this)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .systemBarsPadding()
+                            .navigationBarsPadding()
+                    ) {
+                        UniClipScreen(activity)
+                    }
                 }
             }
         }
@@ -56,7 +71,8 @@ private fun UniClipScreen(activity: Activity) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("UniClip", style = MaterialTheme.typography.headlineMedium)
@@ -95,70 +111,101 @@ private fun UniClipScreen(activity: Activity) {
         }
 
         SectionTitle("Available Macs")
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(discovered) { computer ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(computer.name)
-                        Text("${computer.host}:${computer.port}", style = MaterialTheme.typography.bodySmall)
+        if (discovered.isEmpty()) {
+            EmptyText("Tap Scan to find Macs on this Wi-Fi.")
+        } else {
+            discovered.forEach { computer ->
+                ComputerCard(
+                    name = computer.name,
+                    endpoint = "${computer.host}:${computer.port}",
+                    actionText = if (trusted.any { it.host == computer.host && it.port == computer.port }) {
+                        "Added"
+                    } else {
+                        "Add"
+                    },
+                    enabled = trusted.none { it.host == computer.host && it.port == computer.port },
+                    outlined = false,
+                    onAction = {
+                        val trustedComputer = TrustedComputer(computer.name, computer.host, computer.port)
+                        repository.add(trustedComputer)
+                        trusted.clear()
+                        trusted.addAll(repository.list())
+                        status.value = "Added ${computer.name}"
                     }
-                    Button(
-                        onClick = {
-                            val trustedComputer = TrustedComputer(computer.name, computer.host, computer.port)
-                            repository.add(trustedComputer)
-                            trusted.clear()
-                            trusted.addAll(repository.list())
-                            status.value = "Added ${computer.name}"
-                        }
-                    ) {
-                        Text("Add")
-                    }
-                }
+                )
             }
         }
 
         SectionTitle("Trusted Macs")
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(trusted) { computer ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(computer.name)
-                        Text("${computer.host}:${computer.port}", style = MaterialTheme.typography.bodySmall)
+        if (trusted.isEmpty()) {
+            EmptyText("Added Macs appear here.")
+        } else {
+            trusted.forEach { computer ->
+                ComputerCard(
+                    name = computer.name,
+                    endpoint = "${computer.host}:${computer.port}",
+                    actionText = "Remove",
+                    enabled = true,
+                    outlined = true,
+                    onAction = {
+                        repository.remove(computer)
+                        trusted.clear()
+                        trusted.addAll(repository.list())
+                        status.value = "Removed ${computer.name}"
                     }
-                    OutlinedButton(
-                        onClick = {
-                            repository.remove(computer)
-                            trusted.clear()
-                            trusted.addAll(repository.list())
-                            status.value = "Removed ${computer.name}"
-                        }
-                    ) {
-                        Text("Remove")
-                    }
-                }
+                )
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.size(8.dp))
         Text("Selected text and share sheet send to all trusted Macs.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium)
+    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun EmptyText(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun ComputerCard(
+    name: String,
+    endpoint: String,
+    actionText: String,
+    enabled: Boolean,
+    outlined: Boolean,
+    onAction: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(name, style = MaterialTheme.typography.titleMedium)
+                Text(endpoint, style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (outlined) {
+                OutlinedButton(onClick = onAction, enabled = enabled) {
+                    Text(actionText)
+                }
+            } else {
+                Button(onClick = onAction, enabled = enabled) {
+                    Text(actionText)
+                }
+            }
+        }
+    }
 }

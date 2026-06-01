@@ -6,6 +6,7 @@ private let protocolVersion = 1
 private let serviceType = "_uniclip._tcp."
 private let serviceDomain = "local."
 private let defaultPort: NWEndpoint.Port = 47191
+private let maxMessageBytes = 20 * 1024 * 1024
 
 struct ClipMessage: Codable {
     let protocolVersion: Int
@@ -20,13 +21,42 @@ struct ClipMessage: Codable {
 
 final class PasteboardWriter: @unchecked Sendable {
     func write(_ message: ClipMessage) throws {
-        guard message.contentType == "text/plain" else {
+        switch message.contentType {
+        case "text/plain":
+            try writeText(message.payload)
+        case let contentType where contentType.hasPrefix("image/"):
+            try writeImage(base64Payload: message.payload, contentType: contentType)
+        default:
             throw UniClipError.unsupportedContentType(message.contentType)
+        }
+    }
+
+    private func writeText(_ text: String) throws {
+        DispatchQueue.main.sync {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        }
+    }
+
+    private func writeImage(base64Payload: String, contentType: String) throws {
+        guard let rawData = Data(base64Encoded: base64Payload),
+              let image = NSImage(data: rawData) else {
+            throw UniClipError.invalidMessage
         }
 
         DispatchQueue.main.sync {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(message.payload, forType: .string)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+
+            if contentType == "image/png" {
+                pasteboard.setData(rawData, forType: NSPasteboard.PasteboardType("public.png"))
+            } else if contentType == "image/jpeg" || contentType == "image/jpg" {
+                pasteboard.setData(rawData, forType: NSPasteboard.PasteboardType("public.jpeg"))
+            }
+
+            if let tiffData = image.tiffRepresentation {
+                pasteboard.setData(tiffData, forType: .tiff)
+            }
         }
     }
 }
@@ -109,7 +139,7 @@ final class UniClipReceiver: @unchecked Sendable {
     }
 
     private func receiveMessage(from connection: NWConnection, buffer: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 256 * 1024) { [weak self] data, _, isComplete, error in
             if let error {
                 print("Receive error: \(error)")
                 connection.cancel()
@@ -119,6 +149,11 @@ final class UniClipReceiver: @unchecked Sendable {
             var nextBuffer = buffer
             if let data {
                 nextBuffer.append(data)
+            }
+
+            guard nextBuffer.count <= maxMessageBytes else {
+                self?.sendAck(to: connection, status: "error", detail: "Payload too large")
+                return
             }
 
             if let newlineIndex = nextBuffer.firstIndex(of: 0x0A) {
@@ -150,7 +185,7 @@ final class UniClipReceiver: @unchecked Sendable {
             seenClipIds.insert(message.clipId)
             try pasteboardWriter.write(message)
             sendAck(to: connection, status: "ok")
-            print("Received text clip from \(message.sourceDeviceName)")
+            print("Received \(message.contentType) clip from \(message.sourceDeviceName)")
         } catch {
             sendAck(to: connection, status: "error", detail: "\(error)")
             print("Payload rejected: \(error)")

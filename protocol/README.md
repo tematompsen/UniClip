@@ -13,7 +13,7 @@ macOS advertises:
   - `device=mac`
   - `name=<host name>`
 
-## Text Payload
+## Payload
 
 Android sends one newline-delimited JSON object over a TCP connection.
 
@@ -29,6 +29,13 @@ Android sends one newline-delimited JSON object over a TCP connection.
   "payload": "Text to paste"
 }
 ```
+
+For `text/plain`, `payload` is plain UTF-8 text.
+
+For `image/*`, `payload` is base64-encoded image bytes. Current tested target types:
+
+- `image/png`
+- `image/jpeg`
 
 macOS responds with one newline-delimited JSON object:
 
