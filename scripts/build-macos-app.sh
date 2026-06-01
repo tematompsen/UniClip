@@ -17,6 +17,7 @@ mkdir -p "$MACOS" "$RESOURCES"
 cp "$ROOT/apps/macos/.build/release/uniclip-mac" "$MACOS/UniClip"
 cp "$ROOT/apps/macos/Resources/UniClip.icns" "$RESOURCES/UniClip.icns"
 cp "$ROOT/apps/macos/Resources/StatusBarIconTemplate.png" "$RESOURCES/StatusBarIconTemplate.png"
+cp "$ROOT/apps/macos/Resources/StatusBarIcon.svg" "$RESOURCES/StatusBarIcon.svg"
 cat > "$CONTENTS/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
