@@ -93,10 +93,21 @@ Android:
 scripts/build-android-apk.sh
 ```
 
+Release artifacts for GitHub Releases:
+
+```sh
+scripts/build-release-artifacts.sh
+```
+
 Both scripts write artifacts to `dist`:
 
 - `dist/macOS/UniClip.app`
 - `dist/android/UniClip-debug.apk`
+- `dist/release/UniClip-macOS-0.1.0.zip`
+- `dist/release/UniClip-Android-0.1.0-release.apk`
+- `dist/release/SHA256SUMS.txt`
+
+Android release signing key is generated locally in `.secrets/` and is not committed. Keep it if you need future APK builds to install over previous release builds.
 
 Device testing usually uses:
 

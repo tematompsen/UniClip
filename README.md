@@ -31,10 +31,19 @@ scripts/build-macos-app.sh
 scripts/build-android-apk.sh
 ```
 
+Release artifacts:
+
+```sh
+scripts/build-release-artifacts.sh
+```
+
 Build artifacts:
 
 - `dist/macOS/UniClip.app`
 - `dist/android/UniClip-debug.apk`
+- `dist/release/UniClip-macOS-0.1.0.zip`
+- `dist/release/UniClip-Android-0.1.0-release.apk`
+- `dist/release/SHA256SUMS.txt`
 
 Device-test artifacts are usually copied to:
 
@@ -44,3 +53,5 @@ Device-test artifacts are usually copied to:
 ## Status
 
 UniClip is a working local prototype. Discovery, text transfer, image sharing, macOS clipboard history, and menu bar UI are implemented. Transport security and real pairing are still planned work.
+
+Android release signing key is generated locally in `.secrets/` and is not committed. Keep it if you want future APK updates to install over previous release builds.

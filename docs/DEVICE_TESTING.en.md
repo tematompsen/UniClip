@@ -73,6 +73,24 @@ mkdir -p builds/device-test
 cp dist/android/UniClip-debug.apk builds/device-test/UniClip-debug.apk
 ```
 
+## Release Artifacts
+
+For GitHub Releases:
+
+```sh
+scripts/build-release-artifacts.sh
+```
+
+Output:
+
+```text
+dist/release/UniClip-macOS-0.1.0.zip
+dist/release/UniClip-Android-0.1.0-release.apk
+dist/release/SHA256SUMS.txt
+```
+
+Android release APK is signed with a local key from `.secrets/`. If the key does not exist, the script creates it automatically. Do not commit `.secrets/`; keep it separately if future release APKs must update already installed builds.
+
 ## Install Android APK
 
 1. Open Android settings.
