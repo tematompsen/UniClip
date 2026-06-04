@@ -378,6 +378,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             guard self.ensurePostEventAccess() else {
+                self.openPastePermissionSettings()
                 self.presentPastePermissionAlert()
                 return
             }
@@ -407,13 +408,41 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentPastePermissionAlert() {
-        NSApp.activate(ignoringOtherApps: true)
+        activateSelf()
         let alert = NSAlert()
         alert.messageText = "Нужно разрешение для вставки"
-        alert.informativeText = "macOS блокирует автоматическую вставку. Разреши UniClip отправлять события клавиатуры в системном запросе, затем выбери фрагмент еще раз."
+        alert.informativeText = "macOS блокирует автоматическую вставку. Включи UniClip в разделе Accessibility, затем выбери фрагмент еще раз."
         alert.alertStyle = .informational
+        alert.addButton(withTitle: "Открыть настройки")
         alert.addButton(withTitle: "OK")
-        alert.runModal()
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            openPastePermissionSettings()
+        }
+    }
+
+    private func openPastePermissionSettings() {
+        let urls = [
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+            "x-apple.systempreferences:com.apple.preference.security?Privacy"
+        ]
+
+        for rawURL in urls {
+            guard let url = URL(string: rawURL) else {
+                continue
+            }
+            if NSWorkspace.shared.open(url) {
+                return
+            }
+        }
+    }
+
+    private func activateSelf() {
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func postPasteShortcut(to application: NSRunningApplication?) {
