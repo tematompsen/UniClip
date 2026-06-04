@@ -10,6 +10,12 @@ private let serviceDomain = "local."
 private let defaultPort: NWEndpoint.Port = 47191
 private let maxMessageBytes = 20 * 1024 * 1024
 
+private enum PasteTargetState {
+    case canPaste
+    case cannotPaste
+    case unknown
+}
+
 struct ClipMessage: Codable {
     let protocolVersion: Int
     let clipId: String
@@ -371,7 +377,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         previousApplication = frontmost
-        previousApplicationCanAcceptPaste = focusedElementCanAcceptPaste(in: frontmost)
+        previousApplicationCanAcceptPaste = focusedElementPasteTargetState(in: frontmost) != .cannotPaste
     }
 
     private func pasteCopiedItem() {
@@ -410,23 +416,23 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    private func focusedElementCanAcceptPaste(in application: NSRunningApplication) -> Bool {
+    private func focusedElementPasteTargetState(in application: NSRunningApplication) -> PasteTargetState {
         guard AXIsProcessTrusted() else {
-            return true
+            return .unknown
         }
 
         let appElement = AXUIElementCreateApplication(application.processIdentifier)
         var focusedValue: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(appElement, "AXFocusedUIElement" as CFString, &focusedValue)
         guard result == .success, let focusedValue else {
-            return false
+            return .unknown
         }
 
         let focusedElement = focusedValue as! AXUIElement
-        return accessibilityElementCanAcceptPaste(focusedElement)
+        return accessibilityElementPasteTargetState(focusedElement)
     }
 
-    private func accessibilityElementCanAcceptPaste(_ element: AXUIElement) -> Bool {
+    private func accessibilityElementPasteTargetState(_ element: AXUIElement) -> PasteTargetState {
         if let role = accessibilityStringAttribute("AXRole", from: element) {
             let textInputRoles: Set<String> = [
                 "AXTextField",
@@ -435,21 +441,41 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
                 "AXSearchField"
             ]
             if textInputRoles.contains(role) {
-                return true
+                return .canPaste
+            }
+
+            let explicitNonInputRoles: Set<String> = [
+                "AXButton",
+                "AXCheckBox",
+                "AXRadioButton",
+                "AXSlider",
+                "AXStaticText",
+                "AXImage",
+                "AXMenuButton",
+                "AXPopUpButton",
+                "AXToolbar",
+                "AXTabGroup"
+            ]
+            if explicitNonInputRoles.contains(role) {
+                return .cannotPaste
             }
         }
 
         if accessibilityAttributeExists("AXSelectedTextRange", in: element) {
-            return true
+            return .canPaste
         }
 
         var isSettable = DarwinBoolean(false)
         if AXUIElementIsAttributeSettable(element, "AXValue" as CFString, &isSettable) == .success,
            isSettable.boolValue {
-            return true
+            return .canPaste
         }
 
-        return false
+        if accessibilityParentChainContainsTextInput(element) {
+            return .canPaste
+        }
+
+        return .unknown
     }
 
     private func accessibilityStringAttribute(_ attribute: String, from element: AXUIElement) -> String? {
@@ -463,6 +489,24 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private func accessibilityAttributeExists(_ attribute: String, in element: AXUIElement) -> Bool {
         var value: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success
+    }
+
+    private func accessibilityParentChainContainsTextInput(_ element: AXUIElement) -> Bool {
+        var current = element
+        for _ in 0..<4 {
+            var parentValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(current, "AXParent" as CFString, &parentValue) == .success,
+                  let parentValue else {
+                return false
+            }
+
+            let parent = parentValue as! AXUIElement
+            if case .canPaste = accessibilityElementPasteTargetState(parent) {
+                return true
+            }
+            current = parent
+        }
+        return false
     }
 
     private func presentPastePermissionAlert() {
