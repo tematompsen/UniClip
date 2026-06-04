@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import CoreGraphics
 import Foundation
 import Network
@@ -232,7 +233,6 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: Any?
     private let hotKeyManager = GlobalHotKeyManager()
     private var previousApplication: NSRunningApplication?
-    private var didRequestPostEventAccess = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -377,7 +377,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         closeHistoryPanel()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-            guard self.ensurePostEventAccess() else {
+            guard self.ensurePasteAutomationAccess() else {
                 self.openPastePermissionSettings()
                 self.presentPastePermissionAlert()
                 return
@@ -394,17 +394,13 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func ensurePostEventAccess() -> Bool {
-        if CGPreflightPostEventAccess() {
+    private func ensurePasteAutomationAccess() -> Bool {
+        if AXIsProcessTrusted() {
             return true
         }
 
-        if !didRequestPostEventAccess {
-            didRequestPostEventAccess = true
-            CGRequestPostEventAccess()
-        }
-
-        return CGPreflightPostEventAccess()
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        return AXIsProcessTrustedWithOptions(options)
     }
 
     private func presentPastePermissionAlert() {
