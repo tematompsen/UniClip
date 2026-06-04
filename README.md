@@ -1,49 +1,46 @@
 # UniClip
 
-Secure local-network clipboard bridge between Android and macOS.
+Local-network clipboard bridge for Android and macOS.
 
-UniClip lets an Android device send selected text and shared images/files to all trusted online Mac computers in the same home network. macOS receives the content and places it into the system clipboard for normal `Cmd+V` paste.
+- [Русская документация](README.ru.md)
+- [English documentation](README.en.md)
 
-## Product Direction
+## Overview
 
-- Android does not rely on background clipboard reading.
-- Text sending uses Android selected-text actions.
-- Images and files use Android share sheet.
-- macOS runs as a menu bar receiver.
-- Devices are discovered on LAN with mDNS/Bonjour.
-- Pairing requires explicit approval on macOS.
-- Transfer is allowed only between trusted devices.
-- Default sending target is all trusted online Macs.
+UniClip sends clipboard content from Android to macOS over a local home network. Android sends selected text or shared images. macOS receives the content, writes it to the system clipboard, and keeps recent clipboard history in a menu bar panel.
 
-## Current State
+The app is built for a low-friction flow: add one or more Macs on Android once, then send content to all trusted Macs on the same LAN.
 
-Development baseline:
+## Features
 
-- macOS SwiftPM receiver prototype in `apps/macos`.
-- Android Kotlin/Compose sender scaffold in `apps/android`.
-- Prototype protocol in `protocol`.
-- macOS menu bar popover with clipboard history and history size setting.
+- LAN discovery with mDNS/Bonjour.
+- Android selected-text sending.
+- Android share-sheet sending for text and images.
+- Sending to all trusted Macs.
+- macOS menu bar receiver.
+- macOS clipboard history with search.
+- Configurable history size from 10 to 100 items.
+- Global hotkey for history window, default `Option + V`.
+- Text and PNG/JPEG image support.
+- Automatic paste from history when macOS Accessibility permission is granted.
 
-## Local Prototype
-
-Run macOS receiver:
+## Quick Build
 
 ```sh
-scripts/run-macos-receiver.sh
+scripts/build-macos-app.sh
+scripts/build-android-apk.sh
 ```
 
-Send test text from same Mac:
+Build artifacts:
 
-```sh
-scripts/send-test-clip.swift "hello from UniClip"
-```
+- `dist/macOS/UniClip.app`
+- `dist/android/UniClip-debug.apk`
 
-Run checks:
+Device-test artifacts are usually copied to:
 
-```sh
-scripts/check.sh
-```
+- `builds/device-test/UniClip.app`
+- `builds/device-test/UniClip-debug.apk`
 
-Android build requires JDK and Android SDK.
+## Status
 
-Device testing steps are in [docs/DEVICE_TESTING.md](docs/DEVICE_TESTING.md).
+UniClip is a working local prototype. Discovery, text transfer, image sharing, macOS clipboard history, and menu bar UI are implemented. Transport security and real pairing are still planned work.
