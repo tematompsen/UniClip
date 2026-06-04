@@ -232,6 +232,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: Any?
     private let hotKeyManager = GlobalHotKeyManager()
     private var previousApplication: NSRunningApplication?
+    private var didRequestPostEventAccess = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -272,6 +273,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
 
     private func installHotKey() {
         hotKeyManager.onHotKey = { [weak self] in
+            self?.rememberFrontmostApplication()
             self?.togglePopover()
         }
         hotKeyManager.register(KeyboardShortcut.load())
@@ -375,23 +377,58 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
         closeHistoryPanel()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            guard self.ensurePostEventAccess() else {
+                self.presentPastePermissionAlert()
+                return
+            }
+
             if #available(macOS 14.0, *) {
                 targetApplication?.activate()
             } else {
                 targetApplication?.activate(options: [.activateIgnoringOtherApps])
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                self.postPasteShortcut()
+                self.postPasteShortcut(to: targetApplication)
             }
         }
     }
 
-    private func postPasteShortcut() {
+    private func ensurePostEventAccess() -> Bool {
+        if CGPreflightPostEventAccess() {
+            return true
+        }
+
+        if !didRequestPostEventAccess {
+            didRequestPostEventAccess = true
+            CGRequestPostEventAccess()
+        }
+
+        return CGPreflightPostEventAccess()
+    }
+
+    private func presentPastePermissionAlert() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Нужно разрешение для вставки"
+        alert.informativeText = "macOS блокирует автоматическую вставку. Разреши UniClip отправлять события клавиатуры в системном запросе, затем выбери фрагмент еще раз."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func postPasteShortcut(to application: NSRunningApplication?) {
         let source = CGEventSource(stateID: .hidSystemState)
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true)
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
         keyDown?.flags = .maskCommand
         keyUp?.flags = .maskCommand
+
+        if let pid = application?.processIdentifier {
+            keyDown?.postToPid(pid)
+            keyUp?.postToPid(pid)
+            return
+        }
+
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
     }
