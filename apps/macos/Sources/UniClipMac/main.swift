@@ -233,6 +233,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: Any?
     private let hotKeyManager = GlobalHotKeyManager()
     private var previousApplication: NSRunningApplication?
+    private var previousApplicationCanAcceptPaste = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -370,11 +371,17 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         previousApplication = frontmost
+        previousApplicationCanAcceptPaste = focusedElementCanAcceptPaste(in: frontmost)
     }
 
     private func pasteCopiedItem() {
         let targetApplication = previousApplication
+        let shouldPaste = previousApplicationCanAcceptPaste
         closeHistoryPanel()
+
+        guard shouldPaste else {
+            return
+        }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             guard self.ensurePasteAutomationAccess() else {
@@ -401,6 +408,61 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
 
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
+    }
+
+    private func focusedElementCanAcceptPaste(in application: NSRunningApplication) -> Bool {
+        guard AXIsProcessTrusted() else {
+            return true
+        }
+
+        let appElement = AXUIElementCreateApplication(application.processIdentifier)
+        var focusedValue: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(appElement, "AXFocusedUIElement" as CFString, &focusedValue)
+        guard result == .success, let focusedValue else {
+            return false
+        }
+
+        let focusedElement = focusedValue as! AXUIElement
+        return accessibilityElementCanAcceptPaste(focusedElement)
+    }
+
+    private func accessibilityElementCanAcceptPaste(_ element: AXUIElement) -> Bool {
+        if let role = accessibilityStringAttribute("AXRole", from: element) {
+            let textInputRoles: Set<String> = [
+                "AXTextField",
+                "AXTextArea",
+                "AXComboBox",
+                "AXSearchField"
+            ]
+            if textInputRoles.contains(role) {
+                return true
+            }
+        }
+
+        if accessibilityAttributeExists("AXSelectedTextRange", in: element) {
+            return true
+        }
+
+        var isSettable = DarwinBoolean(false)
+        if AXUIElementIsAttributeSettable(element, "AXValue" as CFString, &isSettable) == .success,
+           isSettable.boolValue {
+            return true
+        }
+
+        return false
+    }
+
+    private func accessibilityStringAttribute(_ attribute: String, from element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? String
+    }
+
+    private func accessibilityAttributeExists(_ attribute: String, in element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        return AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success
     }
 
     private func presentPastePermissionAlert() {
