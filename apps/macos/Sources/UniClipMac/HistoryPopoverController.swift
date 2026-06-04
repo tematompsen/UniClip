@@ -13,7 +13,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
 
     private let store: ClipboardHistoryStore
     private let searchField = NSSearchField()
-    private let scrollView = NSScrollView()
+    private let scrollView = HistoryScrollView()
     private let listContainer = FlippedView()
     private let listStack = NSStackView()
     private let settingsStack = NSStackView()
@@ -258,7 +258,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
             let label = NSTextField(labelWithString: text.replacingOccurrences(of: "\n", with: " "))
             label.font = .systemFont(ofSize: 11, weight: .regular)
             label.lineBreakMode = .byTruncatingMiddle
-            button.highlightTextFields.append(label)
+            button.registerHighlightTextField(label)
             row.addArrangedSubview(label)
         case .image(let image, _):
             let imageView = NSImageView()
@@ -272,7 +272,7 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
             let label = NSTextField(labelWithString: "Изображение")
             label.textColor = .secondaryLabelColor
             label.font = .systemFont(ofSize: 11, weight: .regular)
-            button.highlightTextFields.append(label)
+            button.registerHighlightTextField(label)
             row.addArrangedSubview(label)
         }
 
@@ -328,8 +328,14 @@ final class HistoryPopoverController: NSViewController, NSSearchFieldDelegate {
 @MainActor
 final class HistoryRowButton: NSButton {
     let item: ClipboardHistoryItem
-    var highlightTextFields: [NSTextField] = []
+    private static weak var currentHover: HistoryRowButton?
+    private var highlightTextFields: [HighlightedTextField] = []
     private var trackingAreaRef: NSTrackingArea?
+
+    private struct HighlightedTextField {
+        weak var field: NSTextField?
+        let normalColor: NSColor
+    }
 
     init(item: ClipboardHistoryItem) {
         self.item = item
@@ -359,11 +365,35 @@ final class HistoryRowButton: NSButton {
         setHover(false)
     }
 
+    func registerHighlightTextField(_ field: NSTextField) {
+        highlightTextFields.append(HighlightedTextField(field: field, normalColor: field.textColor ?? .labelColor))
+    }
+
+    static func clearCurrentHover() {
+        currentHover?.setHover(false)
+    }
+
     private func setHover(_ isHovering: Bool) {
-        layer?.backgroundColor = isHovering ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
-        highlightTextFields.forEach {
-            $0.textColor = isHovering ? .white : .labelColor
+        if isHovering {
+            if Self.currentHover !== self {
+                Self.currentHover?.setHover(false)
+            }
+            Self.currentHover = self
+        } else if Self.currentHover === self {
+            Self.currentHover = nil
         }
+
+        layer?.backgroundColor = isHovering ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
+        highlightTextFields.forEach { item in
+            item.field?.textColor = isHovering ? .white : item.normalColor
+        }
+    }
+}
+
+final class HistoryScrollView: NSScrollView {
+    override func scrollWheel(with event: NSEvent) {
+        HistoryRowButton.clearCurrentHover()
+        super.scrollWheel(with: event)
     }
 }
 

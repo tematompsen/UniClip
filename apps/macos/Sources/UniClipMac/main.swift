@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import Foundation
 import Network
 
@@ -230,6 +231,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private var historyPanel: HistoryPanel?
     private var eventMonitor: Any?
     private let hotKeyManager = GlobalHotKeyManager()
+    private var previousApplication: NSRunningApplication?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -246,7 +248,7 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             self?.quit()
         }
         controller.onItemCopied = { [weak self] in
-            self?.closeHistoryPanel()
+            self?.pasteCopiedItem()
         }
         controller.onShortcutChanged = { [weak self] shortcut in
             self?.hotKeyManager.register(shortcut)
@@ -335,6 +337,8 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        rememberFrontmostApplication()
+
         let buttonRect = button.convert(button.bounds, to: nil)
         guard let screenRect = button.window?.convertToScreen(buttonRect) else {
             return
@@ -356,6 +360,40 @@ final class UniClipAppDelegate: NSObject, NSApplicationDelegate {
     private func closeHistoryPanel() {
         historyPanel?.orderOut(nil)
         removeEventMonitor()
+    }
+
+    private func rememberFrontmostApplication() {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication,
+              frontmost.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return
+        }
+        previousApplication = frontmost
+    }
+
+    private func pasteCopiedItem() {
+        let targetApplication = previousApplication
+        closeHistoryPanel()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            if #available(macOS 14.0, *) {
+                targetApplication?.activate()
+            } else {
+                targetApplication?.activate(options: [.activateIgnoringOtherApps])
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                self.postPasteShortcut()
+            }
+        }
+    }
+
+    private func postPasteShortcut() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
+        keyDown?.flags = .maskCommand
+        keyUp?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
     }
 
     private func installEventMonitor() {
